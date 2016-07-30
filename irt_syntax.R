@@ -19,9 +19,15 @@ df.1 <- subset(df, BILLS != "8" & TAXES != "8" & SHOPPING != "8" & GAMES != "8" 
 
 summary(df1)
 
-which(colnames(df.1)=="CDRGLOB")
+which(colnames(df.1)=="INVISITS")
 
 lapply(df.1[, 31:40], function(x) table(df.1[, 28], x)) 
+lapply(df.1[, 31:40], function(x) table(df.1[, 16], x)) 
+lapply(df.1[, 31:40], function(x) table(df.1[, 18], x)) 
+
+table(df$INLIVWTH, df$INVISITS)
+
+##INLIVWITH = NA when val = 1, recode INVISITS to 1 to reflect daily exposure.
 
 library(MplusAutomation)
 
