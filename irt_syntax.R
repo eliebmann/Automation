@@ -28,7 +28,7 @@ lapply(df.1[, 31:40], function(x) table(df.1[, 18], x))
 table(df$INLIVWTH, df$INVISITS)
 
 ##INLIVWITH = NA when val = 1, recode INVISITS to 1 to reflect daily exposure.
-######
+###### ###
 
 library(MplusAutomation)
 
