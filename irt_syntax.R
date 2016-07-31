@@ -17,7 +17,8 @@ df$MARISTAT <- mapvalues(df$MARISTAT, c("1", "2", "3", "4", "5", "6", "9"), c("M
 
 df.1 <- subset(df, BILLS != "8" & TAXES != "8" & SHOPPING != "8" & GAMES != "8" & STOVE != "8" & MEALPREP != "8" & EVENTS != "8" & PAYATTN != "8" & REMDATES != "8" & TRAVEL != "8" ) 
 
-summary(df1)
+df[df$INLIVWTH == "1", 1]
+
 
 which(colnames(df.1)=="INVISITS")
 
@@ -28,7 +29,6 @@ lapply(df.1[, 31:40], function(x) table(df.1[, 18], x))
 table(df$INLIVWTH, df$INVISITS)
 
 ##INLIVWITH = NA when val = 1, recode INVISITS to 1 to reflect daily exposure.
-###### ###
 
 library(MplusAutomation)
 
