@@ -33,14 +33,14 @@ table(df$INLIVWTH, df$INVISITS)
 
 #save(df.1, file = "IRT_ADC.Rdata")
 ##INLIVWITH = NA when val = 1, recode INVISITS to 1 to reflect daily exposure.
-
+########FAQ ANALYSIS##############
+########FAQ ANALYSIS#############
 FAQ <- df.1[, c(1, 31:40)]
 
-prepareMplusData(FAQ, "faq.dat")
-
-createModels("/Users/eliebmann/Dropbox/IRT_2016/m1.txt")
-
 library(MplusAutomation)
+library(rhdf5)
+
+prepareMplusData(FAQ, "faq.dat")
 
 m1 <- mplusObject(
   TITLE = "IRT - FAQ;",
@@ -68,5 +68,45 @@ m1 <- mplusObject(
 m1syn <- createSyntax(m1, "faq_m1", check = TRUE)
 res <- mplusModeler(m1, run = 1L, dataout = "m1d.dat", modelout = "m1.inp")
 
-library(rhdf5)
-mplus.plot.irt.icc("m1.gh5",  xvar = "F1", uvar = "BILLS")
+mplus.plot.irt.icc("m1.gh5",  xvar = "F1", uvar = "PAYATTN")
+
+funct <- read.table("FAQ_THETAS.dat")
+theta <- funct[, 12]
+
+plot(theta ~ EDUC, data = df.1, ylim = c(-3, 3))
+
+################NPI ANALYSIS#############
+################NPI ANALYSIS#############
+NPI <- df.1[, c("PTID", 
+"DEL", "HALL", "AGIT", "DEPD", "ANX", "ELAT",
+"APA", "DISN", "IRR", "MOT", "NITE", "APP")]
+
+n1 <- mplusObject(
+  TITLE = "IRT - NPI;",
+  VARIABLE = "
+  CATEGORICAL ARE DEL HALL AGIT DEPD ANX ELAT
+APA DISN IRR MOT NITE APP;
+  
+  IDVARIABLE is PTID;",
+  MODEL =
+  "F1 BY DEL HALL AGIT 
+  DEPD ANX ELAT
+APA DISN IRR MOT NITE APP;",
+  OUTPUT = 
+  "STDYX;
+  RESIDUAL TECH10;",
+  SAVEDATA = 
+  "SAVE = FSCORES;
+  FILE IS NPI_THETAS.dat;",
+  PLOT = 
+  "TYPE IS PLOT1;
+  TYPE IS PLOT2;
+  TYPE IS PLOT3;",
+  rdata = NPI
+  )
+
+n1syn <- createSyntax(n1, "faq_n1", check = TRUE)
+resn <- mplusModeler(n1, run = 1L, dataout = "n1d.dat", modelout = "n1.inp")
+
+np <- read.table("NPI_THETAS.dat")
+theta_np <- np[, 14]
