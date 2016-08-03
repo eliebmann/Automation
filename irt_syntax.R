@@ -23,7 +23,7 @@ df.1 <- subset(df, BILLS != "8" & TAXES != "8" & SHOPPING != "8" & GAMES != "8" 
 
 sapply(df.1, function(x) sum(is.na(x)))
 
-which(colnames(df.1)=="INVISITS")
+which(colnames(df.1)=="TRAVEL")
 
 lapply(df.1[, 31:40], function(x) table(df.1[, 28], x)) 
 lapply(df.1[, 31:40], function(x) table(df.1[, 16], x)) 
@@ -31,7 +31,18 @@ lapply(df.1[, 31:40], function(x) table(df.1[, 18], x))
 
 table(df$INLIVWTH, df$INVISITS)
 
+#save(df.1, file = "IRT_ADC.Rdata")
 ##INLIVWITH = NA when val = 1, recode INVISITS to 1 to reflect daily exposure.
+
+FAQ <- df.1[, c(1, 31:40)]
 
 library(MplusAutomation)
 
+m1 <- mplusObject(
+  TITLE = "IRT - FAQ;",
+  VARIABLE = "
+  CATEGORICAL = BILLS, TAXES, SHOPPING, GAMES, STOVE
+  MEALPREP, EVENTS, PAYATTN, REMDATES, TRAVEL;
+  IDVARIABLES is PTID;"
+  rdata = FAQ)
+  
