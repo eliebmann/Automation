@@ -65,3 +65,5 @@ m1 <- mplusObject(
   rdata = FAQ
   )
   
+m1syn <- createSyntax(m1, "faq_m1", check = TRUE)
+mplusModeler(m1, run = 1L, dataout = "m1d.dat", modelout = "m1.out")
