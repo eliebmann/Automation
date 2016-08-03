@@ -47,11 +47,11 @@ m1 <- mplusObject(
   VARIABLE = "
   CATEGORICAL ARE BILLS TAXES SHOPPING GAMES STOVE
   MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
-  
   IDVARIABLE is PTID;",
   MODEL =
-  "F1 BY BILLS TAXES SHOPPING GAMES STOVE
-  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;",
+  "F1 BY BILLS* TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
+  F1@1;",
   OUTPUT = 
   "STDYX;
   RESIDUAL TECH10;",
@@ -86,12 +86,12 @@ n1 <- mplusObject(
   VARIABLE = "
   CATEGORICAL ARE DEL HALL AGIT DEPD ANX ELAT
 APA DISN IRR MOT NITE APP;
-  
   IDVARIABLE is PTID;",
   MODEL =
-  "F1 BY DEL HALL AGIT 
+  "F1 BY *DEL HALL AGIT 
   DEPD ANX ELAT
-APA DISN IRR MOT NITE APP;",
+APA DISN IRR MOT NITE APP;
+F1@1;",
   OUTPUT = 
   "STDYX;
   RESIDUAL TECH10;",
@@ -110,3 +110,8 @@ resn <- mplusModeler(n1, run = 1L, dataout = "n1d.dat", modelout = "n1.inp")
 
 np <- read.table("NPI_THETAS.dat")
 theta_np <- np[, 14]
+plot(theta_np ~ NPIQINF, data = df.1, ylim = c(-3, 3))
+
+param <- extractModelParameters(target = getwd())
+npi_unstd <- param[1][[1]]$unstandardized
+npi_disc <- faq_unstd[1:10, 3]/1
