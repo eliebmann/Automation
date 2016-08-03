@@ -36,22 +36,22 @@ table(df$INLIVWTH, df$INVISITS)
 
 FAQ <- df.1[, c(1, 31:40)]
 
+prepareMplusData(FAQ, "faq.dat")
+
+createModels("/Users/eliebmann/Dropbox/IRT_2016/m1.txt")
+
 library(MplusAutomation)
 
 m1 <- mplusObject(
   TITLE = "IRT - FAQ;",
   VARIABLE = "
-  NAMES ARE PTID BILLS TAXES SHOPPING GAMES STOVE
-  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
-  
   CATEGORICAL ARE BILLS TAXES SHOPPING GAMES STOVE
   MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
   
-  IDVARIABLES is PTID;",
+  IDVARIABLE is PTID;",
   MODEL =
   "F1 BY BILLS TAXES SHOPPING GAMES STOVE
-  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
-  F1@1;",
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;",
   OUTPUT = 
   "STDYX;
   RESIDUAL TECH10;",
@@ -66,4 +66,7 @@ m1 <- mplusObject(
   )
   
 m1syn <- createSyntax(m1, "faq_m1", check = TRUE)
-mplusModeler(m1, run = 1L, dataout = "m1d.dat", modelout = "m1.out")
+res <- mplusModeler(m1, run = 1L, dataout = "m1d.dat", modelout = "m1.inp")
+
+library(rhdf5)
+mplus.plot.irt.icc("m1.gh5",  xvar = "F1", uvar = "BILLS")
