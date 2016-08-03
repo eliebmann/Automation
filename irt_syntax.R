@@ -39,6 +39,8 @@ FAQ <- df.1[, c(1, 31:40)]
 
 library(MplusAutomation)
 library(rhdf5)
+library(ggplot2)
+library(reshape2)
 
 prepareMplusData(FAQ, "faq.dat")
 
@@ -72,8 +74,7 @@ mplus.plot.irt.icc("m1.gh5",  xvar = "F1", uvar = "PAYATTN")
 
 funct <- read.table("FAQ_THETAS.dat")
 theta <- funct[, 12]
-
-plot(theta ~ EDUC, data = df.1, ylim = c(-3, 3))
+df.1$theta <- theta
 
 param <- extractModelParameters(target = getwd())
 faq_unstd <- param[1][[1]]$unstandardized
@@ -100,6 +101,31 @@ cbind.fill <- function(...){
 ##THIS IS A CBIND FILL FUNCTION#####
 
 FAQpars <- data.frame(unlist(cbind.fill(faq_unstd, diffs)))
+FAQpars_1 <- FAQpars[11:40, ]
+FAQpars_1[, 3:7] <- lapply(FAQpars_1[, 3:7], as.character)
+FAQpars_1[, 3:7] <- lapply(FAQpars_1[, 3:7], as.numeric)
+FAQpars_1$param <- as.factor(as.character(FAQpars_1$param ))
+
+FAQpars_1$item<- rep(c( "BILLS", "TAXES", "SHOPPING", "GAMES", "STOVE", "MEALPREP", "EVENTS", "PAYATTN", "REMDATES", "TRAVEL"), each = 3)
+
+ggplot() + geom_line(aes(y = param, x = V7, group = item, color = item), data = FAQpars_1) + theme(text = element_text(size=10), axis.text.x = element_text(angle=90, vjust=1)) +xlim(c(0, 3)) + geom_point(aes(x = theta))
+
+xlim <- c(0, 3);
+ylim <- c(0, 3);
+px <- FAQpars_1$V7;
+lx <- FAQpars_1$V7;
+py <- rep(0, length(px));
+ty <- rep(0, length(theta));
+lx.buf <- 1;
+ly <- .5;
+
+par(xaxs = 'i', yaxs = 'i', mar = c(5, 1, 1, 1));
+plot(NA, xlim=xlim, ylim=ylim, axes = FALSE, ann = FALSE);
+axis(1);
+segments(px, py, lx, ly);
+#points(px, py, pch = 16, xpd = NA);
+points(theta, ty, pch = 15, col = "red", cex = 0.75)
+text(lx, ly, paste0(FAQpars_1$param), pos = 3, cex = 0.5, srt = 90);
 
 ################NPI ANALYSIS#############
 ################NPI ANALYSIS#############
