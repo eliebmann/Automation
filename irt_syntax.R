@@ -75,6 +75,32 @@ theta <- funct[, 12]
 
 plot(theta ~ EDUC, data = df.1, ylim = c(-3, 3))
 
+param <- extractModelParameters(target = getwd())
+faq_unstd <- param[1][[1]]$unstandardized
+faq_disc <- faq_unstd[1:10, 3]
+
+disc_num <- rep(1:nrow(faq_unstd[faq_unstd$paramHeader=="F1.BY", ]), each = 3)
+diff_num <- c((nrow(faq_unstd[faq_unstd$paramHeader=="F1.BY", ])+1) : (nrow(faq_unstd)-1))
+
+diffs <- c()
+for (b in disc_num){
+  for(n in diff_num){
+    diffs[n] <- faq_unstd[n, 3]/faq_unstd[b, 3]
+  }
+}
+
+##THIS IS A CBIND FILL FUNCTION#####
+cbind.fill <- function(...){
+    nm <- list(...) 
+    nm <- lapply(nm, as.matrix)
+    n <- max(sapply(nm, nrow)) 
+    do.call(cbind, lapply(nm, function (x) 
+        rbind(x, matrix(, n-nrow(x), ncol(x))))) 
+}
+##THIS IS A CBIND FILL FUNCTION#####
+
+FAQpars <- data.frame(unlist(cbind.fill(faq_unstd, diffs)))
+
 ################NPI ANALYSIS#############
 ################NPI ANALYSIS#############
 NPI <- df.1[, c("PTID", 
@@ -112,6 +138,3 @@ np <- read.table("NPI_THETAS.dat")
 theta_np <- np[, 14]
 plot(theta_np ~ NPIQINF, data = df.1, ylim = c(-3, 3))
 
-param <- extractModelParameters(target = getwd())
-npi_unstd <- param[1][[1]]$unstandardized
-npi_disc <- faq_unstd[1:10, 3]/1
