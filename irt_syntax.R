@@ -17,9 +17,11 @@ df$MARISTAT <- mapvalues(df$MARISTAT, c("1", "2", "3", "4", "5", "6", "9"), c("M
 
 library(car)
 
-df$INVISITS <- recode(df$INVISITS, "NA = 1")
+df$INVISITS1 <- recode(df$INVISITS, "NA = 1")
 
 df.1 <- subset(df, BILLS != "8" & TAXES != "8" & SHOPPING != "8" & GAMES != "8" & STOVE != "8" & MEALPREP != "8" & EVENTS != "8" & PAYATTN != "8" & REMDATES != "8" & TRAVEL != "8" ) 
+
+sapply(df.1, function(x) sum(is.na(x)))
 
 which(colnames(df.1)=="INVISITS")
 
