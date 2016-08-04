@@ -23,7 +23,7 @@ df$INVISITS1 <- recode(df$INVISITS, "NA = 1")
 ###THIS Df recodes 8 (didn't do) as NA. To be included in ML estimation
 ###FOR USE WITH FIML#################################
 FAQ_full <- df[, c(1, 31:40)]
-FAQ_full[, 2:11] <- lapply(df_full[, 2:11], function(x) recode(x, "8 = NA")) 
+FAQ_full[, 2:11] <- lapply(FAQ_full[, 2:11], function(x) recode(x, "8 = NA")) 
 
 df.1 <- subset(df, BILLS != "8" & TAXES != "8" & SHOPPING != "8" & GAMES != "8" & STOVE != "8" & MEALPREP != "8" & EVENTS != "8" & PAYATTN != "8" & REMDATES != "8" & TRAVEL != "8" ) 
 
@@ -147,7 +147,17 @@ m1_logit <- mplusObject(
   MODEL =
   "F1 BY BILLS* TAXES SHOPPING GAMES STOVE
   MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
-  F1@1; [F1@0];",
+  F1@1; [F1@0];
+  [BILLS*];
+  [TAXES*];
+  [SHOPPING*];
+  [GAMES*];
+  [STOVE*];
+  [MEALPREP*];
+  [EVENTS*];
+  [PAYATTN*];
+  [REMDATES*];
+  [TRAVEL*];",
   OUTPUT = 
   "STDYX;
   RESIDUAL;
