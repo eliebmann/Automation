@@ -147,17 +147,7 @@ m1_logit <- mplusObject(
   MODEL =
   "F1 BY BILLS* TAXES SHOPPING GAMES STOVE
   MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
-  F1@1; [F1@0];
-  [BILLS*];
-  [TAXES*];
-  [SHOPPING*];
-  [GAMES*];
-  [STOVE*];
-  [MEALPREP*];
-  [EVENTS*];
-  [PAYATTN*];
-  [REMDATES*];
-  [TRAVEL*];",
+  F1@1; [F1@0];",
   OUTPUT = 
   "STDYX;
   RESIDUAL;
@@ -179,7 +169,8 @@ m1_logit <- mplusObject(
 NPI <- df.1[, c("PTID", 
 "DEL", "HALL", "AGIT", "DEPD", "ANX", "ELAT",
 "APA", "DISN", "IRR", "MOT", "NITE", "APP")]
-
+###########PROBIT##################
+###########PROBIT###################
 n1 <- mplusObject(
   TITLE = "IRT - NPI;",
   VARIABLE = "
@@ -213,6 +204,35 @@ theta_np <- np[, 14]
 npi_unstd <- param[2][[1]]$unstandardized
 npi_unstd1 <- npi_unstd[28:51, ]
 
+###########LOGIT#################
+###########LOGIT#################
+n1_l <- mplusObject(
+  TITLE = "IRT - NPI;",
+  VARIABLE = "
+  CATEGORICAL ARE DEL HALL AGIT DEPD ANX ELAT
+APA DISN IRR MOT NITE APP;
+  IDVARIABLE is PTID;",
+  ANALYSIS ="
+  ESTIMATOR IS ML;
+  LINK IS LOGIT;",
+  MODEL =
+  "F1 BY *DEL HALL AGIT 
+  DEPD ANX ELAT
+APA DISN IRR MOT NITE APP;
+F1@1;",
+  OUTPUT = 
+  "STDYX;
+  RESIDUAL TECH10;",
+  SAVEDATA = 
+  "SAVE = FSCORES;
+  FILE IS NPI_THETAS.dat;",
+  PLOT = 
+  "TYPE IS PLOT1;
+  TYPE IS PLOT2;
+  TYPE IS PLOT3;",
+  rdata = NPI
+  )
 
-
+n1syn_l <- createSyntax(n1_l, "faqlogit_n1", check = TRUE)
+resn_l <- mplusModeler(n1_l, run = 1L, dataout = "n1dlogit.dat", modelout = "n1logit.inp")
 
