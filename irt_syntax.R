@@ -1,3 +1,4 @@
+setwd('/Users/eliebmann/Dropbox/IRT_2016')
 dd <- read.csv("amber_merged.csv", na.strings = c("", " "))
 
 df1 <- dd[dd$VISITNUM == "1", ]
@@ -19,11 +20,16 @@ library(car)
 
 df$INVISITS1 <- recode(df$INVISITS, "NA = 1")
 
+###THIS Df recodes 8 (didn't do) as NA. To be included in ML estimation
+###FOR USE WITH FIML#################################
+FAQ_full <- df[, c(1, 31:40)]
+FAQ_full[, 2:11] <- lapply(df_full[, 2:11], function(x) recode(x, "8 = NA")) 
+
 df.1 <- subset(df, BILLS != "8" & TAXES != "8" & SHOPPING != "8" & GAMES != "8" & STOVE != "8" & MEALPREP != "8" & EVENTS != "8" & PAYATTN != "8" & REMDATES != "8" & TRAVEL != "8" ) 
 
 sapply(df.1, function(x) sum(is.na(x)))
 
-which(colnames(df.1)=="TRAVEL")
+which(colnames(df)=="TRAVEL")
 
 lapply(df.1[, 31:40], function(x) table(df.1[, 28], x)) 
 lapply(df.1[, 31:40], function(x) table(df.1[, 16], x)) 
@@ -44,6 +50,7 @@ library(reshape2)
 
 prepareMplusData(FAQ, "faq.dat")
 
+####PROBIT MODEL################
 m1 <- mplusObject(
   TITLE = "IRT - FAQ;",
   VARIABLE = "
@@ -77,7 +84,7 @@ theta <- funct[, 12]
 df.1$theta <- theta
 
 param <- extractModelParameters(target = getwd())
-faq_unstd <- param[1][[1]]$unstandardized
+faq_unstd <- param[2][[1]]$unstandardized
 faq_disc <- faq_unstd[1:10, 3]
 
 disc_num <- rep(1:nrow(faq_unstd[faq_unstd$paramHeader=="F1.BY", ]), each = 3)
@@ -108,7 +115,7 @@ FAQpars_1$param <- as.factor(as.character(FAQpars_1$param ))
 
 FAQpars_1$item<- rep(c( "BILLS", "TAXES", "SHOPPING", "GAMES", "STOVE", "MEALPREP", "EVENTS", "PAYATTN", "REMDATES", "TRAVEL"), each = 3)
 
-ggplot() + geom_line(aes(y = param, x = V7, group = item, color = item), data = FAQpars_1) + theme(text = element_text(size=10), axis.text.x = element_text(angle=90, vjust=1)) +xlim(c(0, 3)) + geom_point(aes(x = theta))
+ggplot() + geom_line(aes(y = param, x = V7, group = item, color = item), data = FAQpars_1) + theme(text = element_text(size=10), axis.text.x = element_text(angle=90, vjust=1)) +xlim(c(0, 3)) 
 
 xlim <- c(0, 3);
 ylim <- c(0, 3);
@@ -126,7 +133,37 @@ segments(px, py, lx, ly);
 #points(px, py, pch = 16, xpd = NA);
 points(theta, ty, pch = 15, col = "red", cex = 0.75)
 text(lx, ly, paste0(FAQpars_1$param), pos = 3, cex = 0.5, srt = 90);
+#########LOGIT MODEL###############################
+#########LOGIT - NOTE CHANGED DF FOR FIML EXPERIMENT
+m1_logit <- mplusObject(
+  TITLE = "IRT - FAQ;",
+  VARIABLE = "
+  CATEGORICAL ARE BILLS TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
+  IDVARIABLE is PTID;",
+  ANALYSIS ="
+  ESTIMATOR IS ML;
+  LINK IS LOGIT;",
+  MODEL =
+  "F1 BY BILLS* TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
+  F1@1; [F1@0];",
+  OUTPUT = 
+  "STDYX;
+  RESIDUAL;
+  TECH10;",
+  SAVEDATA = 
+  "SAVE = FSCORES;
+  FILE IS FAQlogit_THETAS.dat;",
+  PLOT = 
+  "TYPE IS PLOT1;
+  TYPE IS PLOT2;
+  TYPE IS PLOT3;",
+  rdata = FAQ_full
+  )
 
+  m1syn_l <- createSyntax(m1_logit, "faqlogit_m1", check = TRUE)
+  res_l <- mplusModeler(m1_logit, run = 1L, dataout = "m1dlogit.dat", modelout = "m1_logit.inp")
 ################NPI ANALYSIS#############
 ################NPI ANALYSIS#############
 NPI <- df.1[, c("PTID", 
@@ -162,5 +199,10 @@ resn <- mplusModeler(n1, run = 1L, dataout = "n1d.dat", modelout = "n1.inp")
 
 np <- read.table("NPI_THETAS.dat")
 theta_np <- np[, 14]
-plot(theta_np ~ NPIQINF, data = df.1, ylim = c(-3, 3))
+
+npi_unstd <- param[2][[1]]$unstandardized
+npi_unstd1 <- npi_unstd[28:51, ]
+
+
+
 
