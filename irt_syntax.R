@@ -20,6 +20,8 @@ df$RESIDENC <- mapvalues(df$RESIDENC, paste0(seq(1:5)), c("Single family residen
 df$MARISTAT <- mapvalues(df$MARISTAT, c("1", "2", "3", "4", "5", "6", "9"), c("Married", "Widowed", "Divorced", "Separated", "Never Married", "Living as married", "Unknown"))
 
 df$INEDU <- ifelse(df$INEDUC < 16, 0, 1)
+df$INREL <- ifelse(df$INRELTO == "Spouse/partner", 0, 1)
+df$MARISTAT <-
 
 library(car)
 
@@ -92,13 +94,6 @@ m1 <- mplusObject(
   
 m1syn <- createSyntax(m1, "faq_m1", check = TRUE)
 res <- mplusModeler(m1, run = 1L, dataout = "m1d.dat", modelout = "m1.inp")
-######PLOTS PLOTS###############################
-par(mfrow=c(5,2))
-for (j in names(FAQ[, 2:11])){
-  mplus.plot.irt.icc("m1.gh5",  xvar = "F1", uvar = j)
-}
-
-mplus.plot.irt.tic("m1.gh5")
 #######################################################
 m2 <- mplusObject(
   TITLE = "IRT - FAQ;",
@@ -264,79 +259,3 @@ m1_logit <- mplusObject(
 
   m1syn_l <- createSyntax(m1_logit, "faqlogit_m1", check = TRUE)
   res_l <- mplusModeler(m1_logit, run = 1L, dataout = "m1dlogit.dat", modelout = "m1_logit.inp")
-################NPI ANALYSIS#############
-################NPI ANALYSIS#############
-NPI <- df.1[, c("PTID", 
-"DEL", "HALL", "AGIT", "DEPD", "ANX", "ELAT",
-"APA", "DISN", "IRR", "MOT", "NITE", "APP")]
-###########PROBIT##################
-###########PROBIT###################
-n1 <- mplusObject(
-  TITLE = "IRT - NPI;",
-  VARIABLE = "
-  CATEGORICAL ARE DEL HALL AGIT DEPD ANX ELAT
-APA DISN IRR MOT NITE APP;
-  IDVARIABLE is PTID;",
-  MODEL =
-  "F1 BY *DEL HALL AGIT 
-  DEPD ANX ELAT
-APA DISN IRR MOT NITE APP;
-F1@1;",
-  OUTPUT = 
-  "STDYX;
-  RESIDUAL TECH10;",
-  SAVEDATA = 
-  "SAVE = FSCORES;
-  FILE IS NPI_THETAS.dat;",
-  PLOT = 
-  "TYPE IS PLOT1;
-  TYPE IS PLOT2;
-  TYPE IS PLOT3;",
-  rdata = NPI
-  )
-
-n1syn <- createSyntax(n1, "faq_n1", check = TRUE)
-resn <- mplusModeler(n1, run = 1L, dataout = "n1d.dat", modelout = "n1.inp")
-
-np <- read.table("NPI_THETAS.dat")
-theta_np <- np[, 14]
-
-npi_unstd <- param[2][[1]]$unstandardized
-npi_unstd1 <- npi_unstd[28:51, ]
-
-###########LOGIT#################
-###########LOGIT#################
-n1_l <- mplusObject(
-  TITLE = "IRT - NPI;",
-  VARIABLE = "
-  CATEGORICAL ARE DEL HALL AGIT DEPD ANX ELAT
-APA DISN IRR MOT NITE APP;
-  IDVARIABLE is PTID;",
-  ANALYSIS ="
-  ESTIMATOR IS ML;
-  LINK IS LOGIT;",
-  MODEL =
-  "F1 BY *DEL HALL AGIT 
-  DEPD ANX ELAT
-APA DISN IRR MOT NITE APP;
-F1@1;",
-  OUTPUT = 
-  "STDYX;
-  RESIDUAL TECH10;",
-  SAVEDATA = 
-  "SAVE = FSCORES;
-  FILE IS NPI_THETAS.dat;",
-  PLOT = 
-  "TYPE IS PLOT1;
-  TYPE IS PLOT2;
-  TYPE IS PLOT3;",
-  rdata = NPI
-  )
-
-n1syn_l <- createSyntax(n1_l, "faqlogit_n1", check = TRUE)
-resn_l <- mplusModeler(n1_l, run = 1L, dataout = "n1dlogit.dat", modelout = "n1logit.inp")
-
-thresh <- function(x){
-  return(-1*qnorm(x))
-}
-thresh(.124)
