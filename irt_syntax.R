@@ -1,4 +1,5 @@
 setwd('/Users/eliebmann/Dropbox/IRT_2016')
+source('/Users/eliebmann/Dropbox/IRT_2016/mplus.R')
 dd <- read.csv("amber_merged.csv", na.strings = c("", " "))
 
 df1 <- dd[dd$VISITNUM == "1", ]
@@ -9,12 +10,16 @@ df <- df1[, c(
 )]
 
 library(plyr)
+library(car)
 
 df$INRELTO <- mapvalues(df$INRELTO, paste0(seq(1:7)), c("Spouse/partner", "Child", "Sibling", "Other relative", "Friend/Neighbor", "Paid caregiver", "Other"))
+df$REL1 <- recode(df$INRELTO, "1 = '1'; else = '2'" )
 
 df$RESIDENC <- mapvalues(df$RESIDENC, paste0(seq(1:5)), c("Single family residence", "Retirement community", "Assisted living", "Skilled Nursing", "Other"))
 
 df$MARISTAT <- mapvalues(df$MARISTAT, c("1", "2", "3", "4", "5", "6", "9"), c("Married", "Widowed", "Divorced", "Separated", "Never Married", "Living as married", "Unknown"))
+
+df$INEDU <- ifelse(df$INEDUC < 16, 0, 1)
 
 library(car)
 
@@ -22,14 +27,14 @@ df$INVISITS1 <- recode(df$INVISITS, "NA = 1")
 
 ###THIS Df recodes 8 (didn't do) as NA. To be included in ML estimation
 ###FOR USE WITH FIML#################################
-FAQ_full <- df[, c(1, 31:40)]
+FAQ_full <- df[, c(1, 18, 31:40, 68)]
 FAQ_full[, 2:11] <- lapply(FAQ_full[, 2:11], function(x) recode(x, "8 = NA")) 
 
 df.1 <- subset(df, BILLS != "8" & TAXES != "8" & SHOPPING != "8" & GAMES != "8" & STOVE != "8" & MEALPREP != "8" & EVENTS != "8" & PAYATTN != "8" & REMDATES != "8" & TRAVEL != "8" ) 
 
 sapply(df.1, function(x) sum(is.na(x)))
 
-which(colnames(df)=="TRAVEL")
+which(colnames(df)=="INEDU")
 
 lapply(df.1[, 31:40], function(x) table(df.1[, 28], x)) 
 lapply(df.1[, 31:40], function(x) table(df.1[, 16], x)) 
@@ -54,13 +59,69 @@ prepareMplusData(FAQ, "faq.dat")
 m1 <- mplusObject(
   TITLE = "IRT - FAQ;",
   VARIABLE = "
+  USEVARIABLES ARE BILLS TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL PTID;
   CATEGORICAL ARE BILLS TAXES SHOPPING GAMES STOVE
   MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
   IDVARIABLE is PTID;",
   MODEL =
-  "F1 BY BILLS* TAXES SHOPPING GAMES STOVE
-  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
+  " F1 BY *BILLS 
+  TAXES 
+  SHOPPING 
+  GAMES 
+  STOVE
+  MEALPREP 
+  EVENTS 
+  PAYATTN 
+  REMDATES 
+  TRAVEL;
   F1@1;",
+  OUTPUT = 
+  "STDYX;
+  RESIDUAL TECH10;",
+  SAVEDATA = 
+  "SAVE = FSCORES;
+  DIFFTEST IS DIFF_PROB.dat;
+  FILE IS FAQ_THETAS.dat;",
+  PLOT = 
+  "TYPE IS PLOT1;
+  TYPE IS PLOT2;
+  TYPE IS PLOT3;",
+  rdata = FAQ_full
+  )
+  
+m1syn <- createSyntax(m1, "faq_m1", check = TRUE)
+res <- mplusModeler(m1, run = 1L, dataout = "m1d.dat", modelout = "m1.inp")
+######PLOTS PLOTS###############################
+par(mfrow=c(5,2))
+for (j in names(FAQ[, 2:11])){
+  mplus.plot.irt.icc("m1.gh5",  xvar = "F1", uvar = j)
+}
+
+mplus.plot.irt.tic("m1.gh5")
+#######################################################
+m2 <- mplusObject(
+  TITLE = "IRT - FAQ;",
+  VARIABLE = "
+  USEVARIABLES ARE BILLS TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL PTID;
+  CATEGORICAL ARE BILLS TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
+  IDVARIABLE is PTID;",
+  MODEL =
+  " F1 BY *BILLS (L) 
+  TAXES (L) 
+  SHOPPING (L) 
+  GAMES (L) 
+  STOVE (L)
+  MEALPREP (L) 
+  EVENTS (L) 
+  PAYATTN (L) 
+  REMDATES (L) 
+  TRAVEL (L);
+  F1@1;",
+  ANALYSIS = 
+  "DIFFTEST = DIFF_PROB.dat;",
   OUTPUT = 
   "STDYX;
   RESIDUAL TECH10;",
@@ -71,14 +132,53 @@ m1 <- mplusObject(
   "TYPE IS PLOT1;
   TYPE IS PLOT2;
   TYPE IS PLOT3;",
-  rdata = FAQ
+  rdata = FAQ_full
   )
   
-m1syn <- createSyntax(m1, "faq_m1", check = TRUE)
-res <- mplusModeler(m1, run = 1L, dataout = "m1d.dat", modelout = "m1.inp")
+m2syn <- createSyntax(m2, "faq_m1", check = TRUE)
+res2 <- mplusModeler(m2, run = 1L, dataout = "m1d.dat", modelout = "m2.inp")
+#####################ADD COVS###########
 
-mplus.plot.irt.icc("m1.gh5",  xvar = "F1", uvar = "PAYATTN")
+m3 <- mplusObject(
+  TITLE = "IRT - FAQ;",
+  VARIABLE = "
+  USEVARIABLES ARE BILLS TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL PTID INLIVWTH
+  INEDU;
+  CATEGORICAL ARE BILLS TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
+  IDVARIABLE is PTID;",
+  MODEL =
+  " F1 BY *BILLS 
+  TAXES 
+  SHOPPING 
+  GAMES 
+  STOVE
+  MEALPREP 
+  EVENTS 
+  PAYATTN 
+  REMDATES 
+  TRAVEL;
+  F1 ON INLIVWTH INEDU;
+  F1@1;",
+  OUTPUT = 
+  "STDYX;
+  RESIDUAL TECH10;",
+  SAVEDATA = 
+  "SAVE = FSCORES;
+  DIFFTEST IS DIFF_PROB.dat;
+  FILE IS FAQ_THETAS.dat;",
+  PLOT = 
+  "TYPE IS PLOT1;
+  TYPE IS PLOT2;
+  TYPE IS PLOT3;",
+  rdata = FAQ_full
+  )
+  
+m3syn <- createSyntax(m3, "faq_m1", check = TRUE)
+res3 <- mplusModeler(m3, run = 1L, dataout = "m1d.dat", modelout = "m1.inp")
 
+#######THETAS################
 funct <- read.table("FAQ_THETAS.dat")
 theta <- funct[, 12]
 df.1$theta <- theta
@@ -236,3 +336,7 @@ F1@1;",
 n1syn_l <- createSyntax(n1_l, "faqlogit_n1", check = TRUE)
 resn_l <- mplusModeler(n1_l, run = 1L, dataout = "n1dlogit.dat", modelout = "n1logit.inp")
 
+thresh <- function(x){
+  return(-1*qnorm(x))
+}
+thresh(.124)
