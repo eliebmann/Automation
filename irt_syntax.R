@@ -30,11 +30,11 @@ df$VISITS <- ifelse(df$INVISITS < 4, 0, 1) #Daily/weekly vs. monthly
 df$LIV <- ifelse(df$LIVSIT < 2, 0, 1)#lives by self vs. lives w/ someone
 df$INAGE <- df$VISITYR - df$INBIRYR
 
-which(colnames(df)=="LIV")
+which(colnames(df)=="INLIVWTH")
 
 ###THIS Df recodes 8 (didn't do) as NA. To be included in ML estimation
 ###FOR USE WITH FIML#################################
-FAQ_full <- df[, c(1, 31:40, 68:74)]
+FAQ_full <- df[, c(1, 31:40, 68:74, 14, 18)]
 FAQ_full[, 2:11] <- lapply(FAQ_full[, 2:11], function(x) recode(x, "8 = NA")) 
 FAQ_full$INAGE <- recode(FAQ_full$INAGE, "-7987 = NA")
 
@@ -62,19 +62,22 @@ library(reshape2)
 #prepareMplusData(FAQ, "faq.dat")
 ######ASSESS LOGICAL DEPENDENCE
 ###### FOR CG VARS##############
+cgvars <- FAQ_full[, 12:20]
+prepareMplusData(cgvars, "cg.dat")
+
 cg1 <- mplusObject(
   TITLE = "CG - LOGI. DEPENDENCE;",
-  VARIABLE =
-  "NAMES ARE "
-  "USEVARIABLES ARE INEDU INREL MARIG CALLS VISITS 
-  LIV INAGE;
+  VARIABLE ="
+  USEVARIABLES ARE INEDU INREL MARIG CALLS VISITS 
+  LIV;
   CATEGORICAL ARE INEDU INREL MARIG CALLS VISITS 
-  LIV INAGE;",
-  ANALYSIS = "TYPE = BASIC;",
-  rdata = FAQ_full
+  LIV;",
+  ANALYSIS = 
+  "TYPE = BASIC;",
+  rdata = cgvars
   )
 mcg <- createSyntax(cg1, "cg_m1", check = TRUE)
-rescg <- mplusModeler(cg1, run = 1L, dataout = "m1d.dat", modelout = "cg.inp")
+rescg <- mplusModeler(cg1, run = 1L, dataout = "cg.dat", modelout = "cg.inp")
 ####PROBIT MODEL################
 m1 <- mplusObject(
   TITLE = "IRT - FAQ;",
@@ -155,7 +158,8 @@ m3 <- mplusObject(
   TITLE = "IRT - FAQ;",
   VARIABLE = "
   USEVARIABLES ARE BILLS TAXES SHOPPING GAMES STOVE
-  MEALPREP EVENTS PAYATTN REMDATES TRAVEL PTID INEDU INREL LIV MARIG;
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL PTID INEDU
+  INSEX INLIVWTH;
   CATEGORICAL ARE BILLS TAXES SHOPPING GAMES STOVE
   MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
   IDVARIABLE is PTID;",
@@ -170,7 +174,7 @@ m3 <- mplusObject(
   PAYATTN 
   REMDATES 
   TRAVEL;
-  F1 ON INEDU INREL LIV MARIG;
+  F1 ON INEDU INLIVWTH INSEX;
   F1@1;",
   OUTPUT = 
   "STDYX;
@@ -188,8 +192,91 @@ m3 <- mplusObject(
   
 m3syn <- createSyntax(m3, "faq_m1", check = TRUE)
 res3 <- mplusModeler(m3, run = 1L, dataout = "m1d.dat", modelout = "m3.inp")
-
-#######THETAS################
+#############MULTI GROUP#############
+mg_1 <- mplusObject(
+  TITLE = "IRT - FAQ;",
+  VARIABLE = "
+  USEVARIABLES ARE BILLS TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL INEDU;
+  CATEGORICAL ARE BILLS TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
+  IDVARIABLE is PTID;
+  GROUPING = INEDU (0 = LO 1 = HI);",
+  MODEL =
+  " F1 BY *BILLS 
+  TAXES 
+  SHOPPING 
+  GAMES 
+  STOVE
+  MEALPREP 
+  EVENTS 
+  PAYATTN 
+  REMDATES 
+  TRAVEL;
+  F1@1;
+  MODEL HI: 
+  {BILLS-TRAVEL @1}",
+  ANALYSIS =
+  "DIFFTEST IS DIFF_PROB.DAT;",
+  OUTPUT = 
+  "STDYX;
+  RESIDUAL TECH10;
+  MODINDICES (0);",
+  SAVEDATA = 
+  "SAVE = FSCORES;
+  FILE IS FAQ_THETAS.dat;",
+  PLOT = 
+  "TYPE IS PLOT1;
+  TYPE IS PLOT2;
+  TYPE IS PLOT3;",
+  rdata = FAQ_full
+  )
+  
+mg_1syn <- createSyntax(mg_1, "faq_m1", check = TRUE)
+res_mg1 <- mplusModeler(mg_1, run = 1L, dataout = "m1d.dat", modelout = "mg_1.inp")
+#####FREED PAYTTN#####################
+mg_2 <- mplusObject(
+  TITLE = "IRT - FAQ;",
+  VARIABLE = "
+  USEVARIABLES ARE BILLS TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL INEDU;
+  CATEGORICAL ARE BILLS TAXES SHOPPING GAMES STOVE
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
+  IDVARIABLE is PTID;
+  GROUPING = INEDU (0 = LO 1 = HI);",
+  MODEL =
+  " F1 BY *BILLS 
+  TAXES 
+  SHOPPING 
+  GAMES 
+  STOVE
+  MEALPREP 
+  EVENTS 
+  PAYATTN 
+  REMDATES 
+  TRAVEL;
+  F1@1;
+  MODEL LO: F1 BY PAYATTN*;
+  MODEL HI: 
+  F1 BY PAYATTN*;
+  {BILLS-TRAVEL @1}",
+  OUTPUT = 
+  "STDYX;
+  RESIDUAL TECH10;
+  MODINDICES (0);",
+  SAVEDATA = 
+  "DIFFTEST IS DIFF_PROB.dat;
+  SAVE = FSCORES;
+  FILE = FSCORES.dat",
+  PLOT = 
+  "TYPE IS PLOT1;
+  TYPE IS PLOT2;
+  TYPE IS PLOT3;",
+  rdata = FAQ_full
+  )
+mg_2syn <- createSyntax(mg_2, "faq_m1", check = TRUE)
+res_mg2 <- mplusModeler(mg_2, run = 1L, dataout = "m1d.dat", modelout = "mg_2.inp")
+#######THETAS##############################
 funct <- read.table("FAQ_THETAS.dat")
 theta <- funct[, 12]
 df.1$theta <- theta
