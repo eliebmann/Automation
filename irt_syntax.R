@@ -19,24 +19,28 @@ df$RESIDENC <- mapvalues(df$RESIDENC, paste0(seq(1:5)), c("Single family residen
 
 df$MARISTAT <- mapvalues(df$MARISTAT, c("1", "2", "3", "4", "5", "6", "9"), c("Married", "Widowed", "Divorced", "Separated", "Never Married", "Living as married", "Unknown"))
 
-df$INEDU <- ifelse(df$INEDUC < 16, 0, 1)
-df$INREL <- ifelse(df$INRELTO == "Spouse/partner", 0, 1)
-df$MARISTAT <-
+df$INVISITS <- recode(df$INVISITS, "NA = 1")
+df$INCALLS <- recode(df$INCALLS, "NA = 1")
 
-library(car)
+df$INEDU <- ifelse(df$INEDUC < 16, 0, 1)# less than college vs. college or more
+df$INREL <- ifelse(df$INRELTO == "Spouse/partner", 0, 1)# s/p vs. other
+df$MARIG <- ifelse(df$MARISTAT == "Married", 0, 1)# Married vs. unmarried
+df$CALLS <- ifelse(df$INCALLS < 4, 0, 1)#Daily/weekly vs. monthly
+df$VISITS <- ifelse(df$INVISITS < 4, 0, 1) #Daily/weekly vs. monthly
+df$LIV <- ifelse(df$LIVSIT < 2, 0, 1)#lives by self vs. lives w/ someone
+df$INAGE <- df$VISITYR - df$INBIRYR
 
-df$INVISITS1 <- recode(df$INVISITS, "NA = 1")
+which(colnames(df)=="LIV")
 
 ###THIS Df recodes 8 (didn't do) as NA. To be included in ML estimation
 ###FOR USE WITH FIML#################################
-FAQ_full <- df[, c(1, 18, 31:40, 68)]
+FAQ_full <- df[, c(1, 31:40, 68:74)]
 FAQ_full[, 2:11] <- lapply(FAQ_full[, 2:11], function(x) recode(x, "8 = NA")) 
+FAQ_full$INAGE <- recode(FAQ_full$INAGE, "-7987 = NA")
 
-df.1 <- subset(df, BILLS != "8" & TAXES != "8" & SHOPPING != "8" & GAMES != "8" & STOVE != "8" & MEALPREP != "8" & EVENTS != "8" & PAYATTN != "8" & REMDATES != "8" & TRAVEL != "8" ) 
+#df.1 <- subset(df, BILLS != "8" & TAXES != "8" & SHOPPING != "8" & GAMES != "8" & STOVE != "8" & MEALPREP != "8" & EVENTS != "8" & PAYATTN != "8" & REMDATES != "8" & TRAVEL != "8" ) 
 
 sapply(df.1, function(x) sum(is.na(x)))
-
-which(colnames(df)=="INEDU")
 
 lapply(df.1[, 31:40], function(x) table(df.1[, 28], x)) 
 lapply(df.1[, 31:40], function(x) table(df.1[, 16], x)) 
@@ -48,15 +52,29 @@ table(df$INLIVWTH, df$INVISITS)
 ##INLIVWITH = NA when val = 1, recode INVISITS to 1 to reflect daily exposure.
 ########FAQ ANALYSIS##############
 ########FAQ ANALYSIS#############
-FAQ <- df.1[, c(1, 31:40)]
+#FAQ <- df.1[, c(1, 31:40)]
 
 library(MplusAutomation)
 library(rhdf5)
 library(ggplot2)
 library(reshape2)
 
-prepareMplusData(FAQ, "faq.dat")
-
+#prepareMplusData(FAQ, "faq.dat")
+######ASSESS LOGICAL DEPENDENCE
+###### FOR CG VARS##############
+cg1 <- mplusObject(
+  TITLE = "CG - LOGI. DEPENDENCE;",
+  VARIABLE =
+  "NAMES ARE "
+  "USEVARIABLES ARE INEDU INREL MARIG CALLS VISITS 
+  LIV INAGE;
+  CATEGORICAL ARE INEDU INREL MARIG CALLS VISITS 
+  LIV INAGE;",
+  ANALYSIS = "TYPE = BASIC;",
+  rdata = FAQ_full
+  )
+mcg <- createSyntax(cg1, "cg_m1", check = TRUE)
+rescg <- mplusModeler(cg1, run = 1L, dataout = "m1d.dat", modelout = "cg.inp")
 ####PROBIT MODEL################
 m1 <- mplusObject(
   TITLE = "IRT - FAQ;",
@@ -133,13 +151,11 @@ m2 <- mplusObject(
 m2syn <- createSyntax(m2, "faq_m1", check = TRUE)
 res2 <- mplusModeler(m2, run = 1L, dataout = "m1d.dat", modelout = "m2.inp")
 #####################ADD COVS###########
-
 m3 <- mplusObject(
   TITLE = "IRT - FAQ;",
   VARIABLE = "
   USEVARIABLES ARE BILLS TAXES SHOPPING GAMES STOVE
-  MEALPREP EVENTS PAYATTN REMDATES TRAVEL PTID INLIVWTH
-  INEDU;
+  MEALPREP EVENTS PAYATTN REMDATES TRAVEL PTID INEDU INREL LIV MARIG;
   CATEGORICAL ARE BILLS TAXES SHOPPING GAMES STOVE
   MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
   IDVARIABLE is PTID;",
@@ -154,7 +170,7 @@ m3 <- mplusObject(
   PAYATTN 
   REMDATES 
   TRAVEL;
-  F1 ON INLIVWTH INEDU;
+  F1 ON INEDU INREL LIV MARIG;
   F1@1;",
   OUTPUT = 
   "STDYX;
@@ -171,7 +187,7 @@ m3 <- mplusObject(
   )
   
 m3syn <- createSyntax(m3, "faq_m1", check = TRUE)
-res3 <- mplusModeler(m3, run = 1L, dataout = "m1d.dat", modelout = "m1.inp")
+res3 <- mplusModeler(m3, run = 1L, dataout = "m1d.dat", modelout = "m3.inp")
 
 #######THETAS################
 funct <- read.table("FAQ_THETAS.dat")
