@@ -6,7 +6,7 @@ df1 <- dd[dd$VISITNUM == "1", ]
 
 df <- df1[, c(
   "PTID", "VISITYR", "VISITNUM", "BIRTHYR", "SEX", "RACE", "HISPANIC", "EDUC", "primary_Dx", "CogImpairmt_subCateg", "RESIDENC", "LIVSIT", "INBIRYR", "INSEX", "INEDUC", "INRELTO", "INRELTOX", "INLIVWTH", "INVISITS", "INCALLS", "MARISTAT", "MARISTAX", "JUDGMENT", "COMMUN", "HOMEHOBB", "PERSCARE", "CDRSUM", "CDRGLOB", "COMPORT", "CDRLANG",  
-   "BILLS", "TAXES", "SHOPPING", "GAMES", "STOVE", "MEALPREP", "EVENTS", "PAYATTN", "REMDATES", "TRAVEL", "NPIQINF", "NPIQINFX", "DEL", "DELSEV", "HALL", "HALLSEV", "AGIT", "AGITSEV", "DEPD", "DEPDSEV", "ANX", "ANXSEV", "ELAT", "ELATSEV", "APA", "APASEV", "DISN", "DISNSEV", "IRR", "IRRSEV", "MOT", "MOTSEV", "NITE", "NITESEV", "APP", "APPSEV"
+   "BILLS", "TAXES", "SHOPPING", "GAMES", "STOVE", "MEALPREP", "EVENTS", "PAYATTN", "REMDATES", "TRAVEL", "NPIQINF", "NPIQINFX", "DEL", "DELSEV", "HALL", "HALLSEV", "AGIT", "AGITSEV", "DEPD", "DEPDSEV", "ANX", "ANXSEV", "ELAT", "ELATSEV", "APA", "APASEV", "DISN", "DISNSEV", "IRR", "IRRSEV", "MOT", "MOTSEV", "NITE", "NITESEV", "APP", "APPSEV", "MMSE"
 )]
 
 library(plyr)
@@ -30,11 +30,12 @@ df$VISITS <- ifelse(df$INVISITS < 4, 0, 1) #Daily/weekly vs. monthly
 df$LIV <- ifelse(df$LIVSIT < 2, 0, 1)#lives by self vs. lives w/ someone
 df$INAGE <- df$VISITYR - df$INBIRYR
 
-which(colnames(df)=="INLIVWTH")
+
+which(colnames(df)=="INAGE")
 
 ###THIS Df recodes 8 (didn't do) as NA. To be included in ML estimation
 ###FOR USE WITH FIML#################################
-FAQ_full <- df[, c(1, 31:40, 68:74, 14, 18)]
+FAQ_full <- df[, c(1, 31:40, 68:74, 14, 18, 67, 75)]
 FAQ_full[, 2:11] <- lapply(FAQ_full[, 2:11], function(x) recode(x, "8 = NA")) 
 FAQ_full$INAGE <- recode(FAQ_full$INAGE, "-7987 = NA")
 
@@ -159,10 +160,12 @@ m3 <- mplusObject(
   VARIABLE = "
   USEVARIABLES ARE BILLS TAXES SHOPPING GAMES STOVE
   MEALPREP EVENTS PAYATTN REMDATES TRAVEL PTID INEDU
-  INSEX INLIVWTH;
+  INSEX INLIVWTH MMSE;
   CATEGORICAL ARE BILLS TAXES SHOPPING GAMES STOVE
   MEALPREP EVENTS PAYATTN REMDATES TRAVEL;
   IDVARIABLE is PTID;",
+  DEFINE = 
+  "CENTER MMSE (GRANDMEAN);",
   MODEL =
   " F1 BY *BILLS 
   TAXES 
@@ -174,7 +177,7 @@ m3 <- mplusObject(
   PAYATTN 
   REMDATES 
   TRAVEL;
-  F1 ON INEDU INLIVWTH INSEX;
+  F1 ON INEDU INLIVWTH INSEX MMSE;
   F1@1;",
   OUTPUT = 
   "STDYX;
